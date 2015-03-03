@@ -1,0 +1,149 @@
+<div class="wrap-inner back-wrap-inner">
+  <% if @products.present? %>
+    <div class="module module-bg-white clearfix">
+      <%= render "list", products: @products, combo: @combo %>
+    </div>
+  <% else %>
+    <%= render 'ims/shared/empty' %>
+  <% end %>
+</div>
+
+
+<% if @combo.present? %>
+<div id="selected_products" class="bottom-box" style="<%= @combo.combo_products.count.zero? ? 'display:none;' : 'display: block;' %>">
+  <div class="row-fluid">
+    <div class="span8 bottom-mini-imgbox">
+      <div id="wrapper_product">
+        <div id="scroller_product" class="bottom-box">
+          <ul id="img_box" class="inline clearfix">
+            <% @combo.combo_products.each do |combo_product| %>
+            <li class="add-link" combo_product_id="<%= combo_product.id %>" product_id="<%= combo_product.remote_id %>">
+              <span class="img-spa" style="height: 50px; width: 50px;line-height: 50px;">
+                <%= image_tag combo_product.img_url %>
+              </span>
+            </li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="span4">
+      <button id="combo_submit" type="button" class="btn btn-small btn-danger text-center fixed-button" value="<%= new_ims_store_combo_path(combo_id: @combo.try(:id)) %>" style="right:10px; bottom:15px;z-index: 2;">确定</button>
+    </div>
+  </div>
+</div>
+<% end %>
+
+<%= hidden_field_tag "count", @search[:data][:totalcount] %>
+<%= hidden_field_tag "page", @search[:data][:pageindex] %>
+<%= hidden_field_tag "per_page", @search[:data][:pagesize] %>
+
+<% content_for :javascripts do %>
+  <script>
+    $(function(){
+
+      var inLoading = false
+
+      <% if @combo.present? %>
+      var myScroll;
+
+      myScroll = new IScroll('#wrapper_product', {
+        click: true,
+        mouseWheel: true,
+        scrollX: true,
+        scrollY: false
+      });
+
+      function loaded () {
+        myScroll
+      }
+
+      window.addEventListener("DOMContentLoaded",loaded,false);
+
+      <% end %>
+
+
+      $("#combo_submit").on("click", function(){
+        $("#loading-box").modal()
+        url = $(this).attr("value")
+        setTimeout(function(){
+          window.location.href = url
+        }, 1)
+      })
+
+      $(document).on("click", ".add_to_combo", function(){
+        this_ele = $(this)
+        product_id = this_ele.attr("product_id")
+        product_type = "2"
+        combo_id = "<%= @combo.try(:id) %>"
+
+        src = this_ele.parents(".p-list").find(".p-pic img").attr("src")
+
+        link = '<a product_id="' + product_id + '" class="btn btn-grey btn-mini btn-select button-select" href="javascript:void(0);">已选</a>'
+        $.get("/ims/store/products/" + product_id + "/add_to_combo", {product_type: product_type, combo_id: combo_id}, function(data){
+          if(data["status"] == true){
+            li = "<li class='add-link' combo_product_id='"+data["id"]+"' product_id='"+product_id+"'><span class='img-spa' style='height: 50px; width: 50px;line-height: 50px;''><img src='"+src+"'></span></li>"
+            $("#selected_products").show()
+            this_ele.replaceWith(link)
+            $("#selected_products ul").append(li)
+            myScroll.refresh()
+          }else{
+            error_modal(data["message"])
+          }
+        }, "json")
+      })
+
+
+
+      $(document).on("click", "#img_box .img-spa", function(){
+        if(confirm("确定删除商品吗？")){
+          this_ele = $(this)
+          li = this_ele.parents("li")
+          combo_product_id = li.attr("combo_product_id")
+          product_id = li.attr("product_id")
+          $.ajax({
+            url: "/ims/store/combos/remove_product?product_id="+combo_product_id,
+            success: function(response){
+              li.remove()
+              link = '<a product_id="' + product_id + '" class="btn btn-danger btn-mini button-select add_to_combo" href="javascript:void(0);">选择</a>'
+              $(".buttons a[product_id='"+product_id+"']").replaceWith(link)
+              if($("#selected_products .img-spa").length == 0){
+                $("#selected_products").hide()
+              }
+            }
+          })
+        }
+      })
+
+
+      $(window).scroll(function(){
+        var htmlHeight=document.body.scrollHeight
+        var clientHeight=document.body.clientHeight
+        var scrollTop=document.body.scrollTop
+        var combo_id = "<%= @combo.try(:id) %>"
+        var count = parseInt($("#count").attr("value"))
+        var page = parseInt($("#page").attr("value"))
+        var per_page = parseInt($("#per_page").attr("value"))
+
+
+        if(scrollTop+clientHeight == htmlHeight && !inLoading){
+          if(page * per_page < count && !inLoading){
+            inLoading = true
+            $("#bottom-loading-box").modal()
+            $.get("/ims/store/products", {combo_id: combo_id, page: page + 1, per_page: per_page}, function(data){
+              if(data["status"] == true){
+                $(".paginate-content:last").after(data["html"])
+                $("#count").attr("value", data["count"])
+                $("#page").attr("value", data["page"])
+                $("#per_page").attr("value", data["per_page"])
+              }
+              $("#bottom-loading-box").modal("hide")
+              inLoading = false
+            }, "json")
+          }
+        }
+
+      })
+    })
+  </script>
+<% end %>

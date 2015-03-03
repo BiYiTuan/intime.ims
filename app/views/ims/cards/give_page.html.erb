@@ -1,0 +1,74 @@
+<div class="wrap-content">
+  <div class="module module-white">
+    <div class="module-card" style="margin-bottom: 0px;">
+      <h1 class="text-center">礼品卡金额：<%= @card[:amount] %>元</h1>
+      <%= image_tag "ims/card-self.png" %>
+    </div>
+  </div>
+  <div class="module module-white card-form-box">
+    <%= form_tag give_ims_cards_path, class: "form-defined", id: "give_form",method: "get" do  %>
+    <%= hidden_field_tag :charge_no, params[:charge_no]  %>
+    <%= hidden_field_tag :trans_id, params[:trans_id]  %>
+    <div class="controls-defined defined-small">
+      <label class="col-5 text-left"><i class="fa fa-user"></i>我的姓名</label>
+      <div class="col-7">
+        <%= text_field_tag :from, params[:from], placeholder: "请输入您的姓名" %>
+      </div>
+    </div>
+    <div class="controls-defined defined-small">
+      <label class="col-12 text-left"><i class="fa fa-pencil-square-o"></i>对好友留言</label>
+      <div class="col-12">
+        <%= text_area_tag :comment, params[:comment], rows: 3, placeholder: "恭喜发财，大吉大利！" %>
+      </div>
+    </div>
+    <button type="button" class="btn btn-danger btn-large btn-block" id="submit_button">确认赠送</button>
+    <% end %>
+  </div>
+</div>
+
+
+
+<%= content_for :javascripts do -%>
+<script type="text/javascript">
+  $(function(){
+
+    $("#submit_button").on("click", function(){
+      form = $(this).parents("form")
+      if(form.valid()){
+        $("#loading-box").modal()
+        form.submit()
+      }
+    })
+
+    $("#give_form").validate({
+      onsubmit: true,
+      onfocusout: false,
+      onkeyup: false,
+      onclick: false,
+      rules: {
+        "from": {
+          required: true
+        }
+      },
+      messages:{
+        "from": {required: '请输入您的姓名'}
+      },
+      showErrors: function (errorMap, errorList) {
+        $.each(this.successList, function (index, value) {
+          $('#'+value.id+'').tooltip('destroy');
+        });
+
+        $.each(errorList, function (index, value) {
+          $('#'+value.element.id+'').attr('title',value.message).tooltip({
+            placement: 'bottom',
+            trigger: 'manual',
+            delay: { show: 500, hide: 5000 }
+          }).tooltip('show');
+        });
+      }
+
+    })
+
+  })
+</script>
+<% end %>

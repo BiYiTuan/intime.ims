@@ -1,0 +1,34 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title><%= @title || '我的礼品卡' %></title>
+  <meta name="description" content="">
+  <meta name="keywords" content="">
+  <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+  <meta name="format-detection" content="telephone=no" />
+  <%= stylesheet_link_tag "ims/application", "ims/card", "ims/template#{@template_id || 1}.css", media: "all" %>
+  <%= javascript_include_tag 'ims/application' %>
+ <!--[if lte IE 6]>
+ <script type="text/javascript" src="ims_assets/bootstrap-2.3.2/js/ie-js/bootstrap-ie.js"></script>
+ <![endif]-->
+</head>
+<body style="">
+  <%= render 'ims/shared/wx_view' %>
+  <div class="wrap">
+    <div class="wrap-content">
+      <%= yield %>
+    </div>
+  </div>
+  <%= render 'ims/shared/share_button' %>
+  <%= render 'ims/shared/track_view' %>
+  <div id="myModal" class="modal hide fade modal-red" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"></div>
+  <script type="text/javascript" charset="utf-8">
+    $(function(){
+      <% if flash[:notice].present? %>
+      error_modal('<%= flash[:notice] %>');
+      <% end %>
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+pwd
+bundle install
+su

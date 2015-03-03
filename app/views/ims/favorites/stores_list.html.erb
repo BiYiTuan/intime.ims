@@ -1,0 +1,59 @@
+<div class="module module-white min-height">
+  <div class="module-tab0 module-tab2 tabs-fixed">
+    <ul class="nav nav-tabs" id="myTab">
+      <li class="active"><%= link_to "店铺收藏", stores_list_ims_favorites_path %></li>
+      <li class=""><%= link_to "组合收藏", combos_list_ims_favorites_path %></li>
+    </ul>
+    <div class="tab-content">
+      <div class="tab-pane active" id="home">
+        <% if @stores.present? %>
+          <%= render "stores_list", stores_list: @stores %>
+        <% else %>
+          <%= render "ims/shared/empty" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%= hidden_field_tag "count", @search_store[:data][:totalcount] %>
+<%= hidden_field_tag "page", @search_store[:data][:pageindex] %>
+<%= hidden_field_tag "per_page", @search_store[:data][:pagesize] %>
+
+<% content_for :javascripts do %>
+<script>
+  $(function(){
+
+    var inLoading = false
+
+    $(window).scroll(function(){
+      var htmlHeight=document.body.scrollHeight
+      var clientHeight=document.body.clientHeight
+      var scrollTop=document.body.scrollTop
+
+      if(scrollTop+clientHeight == htmlHeight && !inLoading){
+        var count = parseInt($("#count").attr("value"))
+        var page = parseInt($("#page").attr("value"))
+        var per_page = parseInt($("#per_page").attr("value"))
+
+        if(page * per_page < count && !inLoading){
+          inLoading = true
+          $("#bottom-loading-box").modal();
+          $.get("/ims/favorites/stores_list", {page: page + 1}, function(data){
+            if(data["status"] == true){
+              $("#count").attr("value", data["count"])
+              $("#page").attr("value", data["page"])
+              $("#per_page").attr("value", data["per_page"])
+              $(".favorite_link:last").after(data["html"])
+            }
+            inLoading = false
+            $("#bottom-loading-box").modal('hide');
+          }, "json")
+        }
+      }
+
+    });
+    format_img(".img-spa");
+  })
+</script>
+<% end %>

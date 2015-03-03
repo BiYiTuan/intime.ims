@@ -1,0 +1,31 @@
+<% content_for :title do 
+  @product[:name]
+ end %>
+ <div class="well">
+<h4><%=@product[:brand][:name]+' - '+ @product[:name]%></h4>
+<div>
+<% @product.resource.select{|r| r[:type]==1}.each do |r| %>
+	<a href="<%= large_pic_url(r)%>">
+	<img src="<%= large_pic_url(r) %>" class="img-rounded">
+	</a>
+<% end %>
+</div>
+<div>
+<% @product.resource.select{|r| r[:type]==2}.each do |r| %>
+	<audio controls>
+		<source src="<%= audio_url(r)%>" type="audio/mpeg" />
+	</audio>
+<% end %>
+</div>
+<div>
+<label><%= newline_to_br(@product[:description])%></label>
+</div>
+<div>
+	<dl>
+		<dt><%=@product[:store][:name]%></dt>
+		<dd><%=@product[:store][:address]%></dd>
+		<dd><%=@product[:store][:tel]%></dd>
+	</dl>
+</div>
+</div>
+

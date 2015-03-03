@@ -1,0 +1,3 @@
+rm -rf /var/app/log/*.log
+rm -rf /opt/nginx/logs/*.log
+/opt/nginx/sbin/nginx -s reload

@@ -1,0 +1,673 @@
+<%= form_tag ims_orders_path, id: "new_order_form", style: "display: none;" do %>
+
+  <% @products.each_with_index do |product, index| %>
+    <% salecolors = product[:salecolors] %>
+    <% sizes = salecolors.first.try(:[], :sizes) || [] %>
+    <% if salecolors.present? %>
+      <%= hidden_field_tag "order[products][][productid]", product[:id] %>
+      <%= hidden_field_tag "order[products][][quantity]", 1 %>
+      <%= hidden_field_tag "order[products][][properties][sizevalueid]", '', id: "sizevalueid#{index}" %>
+      <%= hidden_field_tag "order[products][][properties][colorvalueid]", salecolors.present? ? salecolors.first[:colorid] : '', id: "colorvalueid#{index}" %>
+
+      <%= hidden_field_tag "order[products][][desc]", product[:name] %>
+      <%= hidden_field_tag "order[products][][properties][sizevaluename]", nil, id: "sizevaluename#{index}" %>
+      <%= hidden_field_tag "order[products][][properties][colorvaluename]", salecolors.present? ? salecolors.first[:colorname] : nil, id: "colorvaluename#{index}" %>
+    <% end %>
+  <% end %>
+
+  <%= hidden_field_tag "order[payment[paymentcode]]", @is_weixin ? Settings.payment_code.imswxpay : Settings.payment_code.imsalipay %>
+  <%= hidden_field_tag "order[payment[paymentname]]", @is_weixin ? "微信支付" : "支付宝" %>
+
+  <%= hidden_field_tag "order[shippingaddress[shippingcontactperson]]", params[:shippingcontactperson].present? ? params[:shippingcontactperson] : (@address.present? ? @address["shippingperson"] : @contact.try(:[], :contact_person)), id: "name" %>
+  <%= hidden_field_tag "order[shippingaddress[shippingcontactphone]]", params[:shippingcontactphone].present? ? params[:shippingcontactphone] : (@address.present? ? @address["shippingphone"] : @contact.try(:[], :contact_phone)), id: "contact" %>
+  <%= hidden_field_tag "order[shippingaddress[shippingzipcode]]", params[:shippingzipcode].present? ? params[:shippingzipcode] : (@address.present? ? @address["shippingzipcode"] : @contact.try(:[], :zip_code)), id: "zipcode" %>
+  <%= hidden_field_tag "order[shippingaddress[shippingaddress]]", params[:shippingaddress].present? ? params[:shippingaddress] : (@address.present? ? @address["displayaddress"] : @contact.try(:[], :full_address)), id: "address" %>
+
+
+
+  <%= hidden_field_tag "order[needinvoice]", false %>
+  <%= hidden_field_tag "order[invoicetitle]", nil %>
+  <%= hidden_field_tag "order[invoicedetail]", nil %>
+  <%= hidden_field_tag "order[memo]", nil %>
+  <%= hidden_field_tag "order[storeid]", session[:store_id] %>
+  <%= hidden_field_tag "order[comboid]", params[:combo_id] %>
+  <%= hidden_field_tag "open_id", session[:wx_openid] %>
+  <%= link_to "请点击选择地址", "javascript:void(0);" %>
+  <%= submit_tag "提交表单" %>
+
+
+<% end %>
+
+<div class="wrap-inner back-wrap-inner" id="new_order_page">
+  <% @products.each_with_index do |product, index| %>
+  <% salecolors = product[:salecolors] %>
+  <% sizes = salecolors.first.try(:[], :sizes) || [] %>
+  <% name = product["name"].present? ? product["name"] : "#{product['brandname']}-#{product["skucode"]}" %>
+  <div class="module common-white">
+
+    <div class="row-fluid">
+      <div class="span3">
+        <div class="detail-imgbox">
+          <img src="<%=Product.img_url(salecolors.first.try(:[], :resource)) %>">
+        </div>
+      </div>
+      <div class="span9">
+        <div class="price-detail">
+          <h3><%= truncate name, length: 40 %></h3>
+          <p class="txt3">
+          微信价：<em>￥<%= product["price"] %></em>
+          <% if product["originprice"].present? %>
+            <span class="middle-line">￥<%= product["originprice"] %></span>
+          <% end %>
+          </p>
+        </div>
+       </div>
+    </div>
+    <div class="current-choose txt8">
+      <div class="row-fluid">
+        <div class="span10">
+          <div style="display: none;" id="selected_color_size<%= index %>">已选：“黑色” “S”</div>
+          <div id="un_select_color_size<%= index %>">
+            <% if salecolors.blank? %>
+              已售罄
+            <% else %>
+              请选择颜色，尺码
+            <% end %>
+          </div>
+        </div>
+        <div class="span2">
+          <% if salecolors.present? %>
+          <div class="text-right">
+            <a class="ellipsis" href="#myModal<%=index%>" data-toggle="modal">•••</a>
+          </div>
+          <% end %>
+            <div id="myModal<%=index%>" class="modal hide fade modal-buy" aria-hidden="true" style="display: none;" index="<%= index %>">
+              <form class="order_product_form">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">&nbsp;</h3>
+              </div>
+                <div class="modal-body">
+                  <div class="module common-white">
+                    <div class="row-fluid">
+                      <div class="span4">
+                           <!-- <div class="detail-imgbox"> -->
+                        <div class="orders_new_modal_img">
+                          <%= image_tag Product.img_url(salecolors.first.try(:[], :resource)) %>
+                        </div>
+                           <!-- </div> -->
+                      </div>
+                      <div class="span8">
+                        <div class="price-detail">
+                          <h3><%= truncate name, length: 40 %></h3>
+                          <p class="txt3">
+                            微信价：<em>￥<%= product["price"] %></em>
+                            <% if product["originprice"].present? %>
+                              <span class="middle-line">￥<%= product["originprice"] %></span>
+                            <% end %>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="module-grey">
+                  <% if salecolors.present?  %>
+                    <div class="modal-color salecolors" index="<%= index %>">
+                      <div class="product-detail">
+                        <div class="row-fluid">
+                        <span class="order_product_label col-2">颜色:</span></li>
+                        <ul class="inline clearfix col-10" >
+                        <% salecolors.each_with_index do |salecolor, index| %>
+                          <li class="<%= 'active' if salecolors.present? && index.zero? %>">
+                            <a href="javascript:void(0);" valueid='<%= salecolor['colorid'] %>' valuename='<%= salecolor['colorname'] %>'>
+                              <%= salecolor['colorname'] %>
+                            </a>
+                          </li>
+                        <% end %>
+                        </ul>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+
+                  <% if sizes.present? %>
+                    <div class="modal-size sizes" index="<%= index %>">
+                      <div class="product-detail">
+                        <div class="row-fluid">
+                        <span class="order_product_label col-2">尺码:</span>
+                        <ul class="inline clearfix col-10">
+                        <% sizes.each do |size| %>
+                          <li>
+                            <a href="javascript:void(0);" valueid='<%= size['sizeid'] %>' valuename='<%= size['sizename'] %>'>
+                              <%= size['sizename'] %>
+                            </a>
+                          </li>
+                        <% end %>
+
+                        </ul>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+
+                  <% if params[:product_id].present? %>
+                  <div class="modal-num">
+                    <span class="tb-stock clearfix">
+                      <span>购买数量</span>
+                      <span class="product_count">
+                        <a class="tb-reduce" hidefocus="" href="javascript:void(0);">-</a>
+                        <input name="count" type="text" value="1" class="txt8 tb-text" id="count<%= index %>">
+                        <a class="tb-increase" href="javascript:void(0);">+</a>
+                      </span>
+                    </span>
+                  </div>
+                  <% end %>
+
+                  </div>
+                </div>
+                 <div class="modal-footer">
+                  <a href="javascript:void(0);" class="btn btn-danger btn-large btn-block save_button">确 定</a>
+                </div>
+              </form>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <% end %>
+  <div class="module common-white" id="address_doc" value="<%= ims_addresses_path(redirect_url: request.fullpath) %>">
+    <div class="module-title2">
+      <div class="row-fluid">
+        <div class="span4"><h3>地址</h3></div>
+        <div class="span8"></div>
+      </div>
+    </div>
+
+    <div class="row-fluid">
+      <!-- <div class="span12 txt-block"> -->
+      <div class="span12">
+
+        <div id="contact_select_wrapper" class="detail-block detail-contact"  style="<%= @contact.present? ? 'display: none;' : 'display: block;' %>">
+          <p class="txt8">
+            <span>
+            <i class="fa fa-map-marker"></i>请选择地址
+            </span>
+          </p>
+        </div>
+        <div id="contact_wrapper" class="detail-block detail-contact" style="<%= @contact.present? ? 'display: inline;' : 'display: none;' %>">
+          <p class="txt8">
+            <span>
+              <i class="fa fa-user"></i><span id="weixin_name"><%= params[:shippingcontactperson].present? ? params[:shippingcontactperson] : (@address.present? ? @address["shippingperson"] : @contact.try(:[], :contact_person)) %></span>
+            </span>
+            &nbsp;
+            <span>
+              <i class="fa fa-phone"></i><span id="weixin_contact"><%= params[:shippingcontactphone].present? ? params[:shippingcontactphone] : (@address.present? ? @address["shippingphone"] : @contact.try(:[], :contact_phone)) %></span>
+            </span>
+          </p>
+          <p class="txt8">
+            <span>
+              <i class="fa fa-map-marker"></i><span id="weixin_address"><%= params[:shippingaddress].present? ? params[:shippingaddress] : (@address.present? ? @address["displayaddress"] : @contact.try(:[], :full_address)) %></span>
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="module common-white">
+    <div class="module-title2">
+      <div class="row-fluid">
+        <div class="span4"><h3>支付方式</h3></div>
+        <div class="span8"></div>
+      </div>
+    </div>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <div id="contact_wrapper" class="detail-address-block">
+          <% if @is_weixin %>
+          <p class="txt8">
+            <%= radio_button_tag "payment_name", "微信", true, paymentcode: Settings.payment_code.imswxpay %>  <span class="payment_text">微信</span>
+          </p>
+          <% end %>
+          <p class="txt8">
+            <%= radio_button_tag "payment_name", "支付宝", @is_weixin ? false : true, paymentcode: Settings.payment_code.imsalipay %>  <span class="payment_text">支付宝</span>
+          </p>
+        </div>
+      </div>
+     </div>
+  </div>
+
+  <div class="module common-white form-defined">
+    <div class="module-title2">
+      <div class="row-fluid">
+        <div class="span4"><h3>发票</h3></div>
+        <div class="span8">
+        </div>
+      </div>
+    </div>
+    <div class="form-box">
+      <div class="controls-defined defined-small">
+      <label class="col-4 text-left"><abbr class="txt-red">*</abbr>发票抬头：</label>
+      <div class="col-8">
+        <%= select_tag "invoicetitle", options_for_select([["无", "无"], ["个人", "个人"], ["公司", "公司"]]) %>
+      </div>
+      </div>
+    </div>
+
+    <div class="form-box" id="invoice_company_name" style="display: none;">
+      <div class="controls-defined defined-small">
+      <label class="col-4 text-left"><abbr class="txt-red">*</abbr>公司名称：</label>
+      <div class="col-8">
+        <%= text_field_tag "company_name" %>
+      </div>
+      </div>
+    </div>
+
+    <div class="form-box" id="invoice_detail" style="display: none;">
+      <div class="controls-defined defined-small">
+      <label class="col-4 text-left"><abbr class="txt-red">*</abbr>发票明细：</label>
+      <div class="col-8">
+        <%= select_tag "invoicedetail", options_for_select([["礼品", "礼品"], ["日用品", "日用品"], ["买什么开什么", "买什么开什么"]]) %>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="module common-white">
+    <div class="module-title2">
+      <div class="row-fluid">
+        <div class="span4"><h3>订单备注</h3></div>
+        <div class="span8">
+          <div class="text-right"><small><i class="fa fa-exclamation-circle"></i> 支持最多200个字符</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="goods-describe">
+      <%= text_area_tag "memo", nil, rows: 2, placeholder: "请在此填写备注信息，例： 会员卡号" %>
+    </div>
+  </div>
+
+  <div class="module common-white">
+    <div class="row-fluid">
+      <div class="span12">
+        <div class="detail-block detail-contact-bd">
+          <p class="txt8 txt-bd clearfix">
+            <span class="pull-left">
+             <i class="fa fa-truck"></i>运费：<%= (totalfee = @order[:totalfee]).zero? ? "免运费" : totalfee %>
+            </span>
+            <span class="pull-right" id="totalamount_text"><b>实付：</b><i>￥<%= @order[:totalamount] %></i></span>
+          </p>
+          <p class="txt8 txt0">
+            <i class="fa fa-exclamation-circle"></i>提交订单后，请在30分钟内完成支付，过时订单将会自动取消
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <% if @products.any?{|p| p[:salecolors].present?} %>
+    <p class="wx-payment">
+    <button type="button" class="btn btn-danger btn-large btn-block" id="save_order">
+      提交订单
+    </button>
+    </p>
+  <% else %>
+    <div style="display: inline;" class="col-12">
+      <a value="114041090567" id="cancel_order" class="btn btn-grey btn-large btn-block" href="javascript:void(0);">已售罄</a>
+    </div>
+  <% end %>
+</div>
+
+<%= hidden_field_tag "totalamount", @order[:totalamount] %>
+<%= hidden_field_tag "orderno", nil %>
+
+<span id="address_page" style="display: none;"></span>
+<span id="address_form_page" style="display: none;"></span>
+
+<% content_for :javascripts do %>
+<script>
+  $(function(){
+
+    $(".payment_text").on("click", function(){
+      $(this).parents(".txt8").find("input[name='payment_name']").prop("checked", true)
+    })
+
+
+    $("#address_doc").on("click", function(){
+      address_id = $(this).attr("address_id")
+      $("#loading-box").modal()
+      setTimeout(function(){
+        $.get("<%= ims_addresses_path %>", {address_id: address_id}, function(data){
+          $("#new_order_page").hide()
+          $("#address_page").html(data["html"])
+          $("#address_page").show()
+          $("#loading-box").modal("hide")
+        }, "json")
+      }, 1)
+    })
+
+    $("#invoicetitle").on("change", function(){
+      invoicetitle = $(this).val()
+      if(invoicetitle == "无"){
+        $("#invoice_company_name").hide()
+        $("#invoice_detail").hide()
+      }else if(invoicetitle == "个人"){
+        $("#invoice_company_name").hide()
+        $("#invoice_detail").show()
+      }else{
+        $("#invoice_company_name").show()
+        $("#invoice_detail").show()
+      }
+
+    }).trigger("change")
+
+    $(".tb-reduce, .tb-increase").on("click", function(){
+      index = $(this).parents(".modal").attr("index")
+      this_class = $(this).attr("class")
+      count_doc = $("#count"+index)
+      value = parseInt(count_doc.val())
+      if(this_class.indexOf("tb-reduce") >= 0){
+        if(value > 1){
+          count_doc.val(value - 1)
+        }
+      }else{
+        if(value < 50){
+          count_doc.val(value + 1)
+        }
+      }
+    })
+
+    $(".save_button").on("click", function(){
+      modal_doc = $(this).parents(".modal")
+      var index = modal_doc.attr("index")
+      selected_doc = $("#selected_color_size"+index)
+      if($(".order_product_form").valid()){
+        if(modal_doc.find(".salecolors li.active").length > 0 && modal_doc.find(".sizes li.active").length > 0){
+          change_color_value(modal_doc, index)
+          change_size_value(modal_doc, index)
+          var color = jQuery.trim($("#colorvaluename"+index).val())
+          var size = jQuery.trim($("#sizevaluename"+index).val())
+          if(color.length > 0 || size.length > 0){
+            color_text = color.length > 0 ? "\""+color+"\"" : ""
+            size_text = size.length > 0 ? "\""+size+"\"" : ""
+            text = jQuery.trim([color_text, size_text].join(" "))
+            un_select_doc = $("#un_select_color_size"+index)
+            un_select_doc.hide()
+            selected_doc.show()
+            selected_doc.text("已选：" + text)
+          }else{
+            un_select_doc.show()
+            un_select_doc.text("请选择颜色，尺码 ")
+            selected_doc.hide()
+          }
+          <% if (product_id = params[:product_id]).present? %>
+            var product_id = "<%= product_id %>"
+            quantity = $("#count0").val()
+            $("#loading-box").modal()
+            setTimeout(function(){
+              $.get("<%= totalamount_ims_orders_path %>", {quantity: quantity, product_id: product_id}, function(data){
+                if(data["status"] == true){
+                  modal_doc.modal("hide")
+                  $("#loading-box").modal("hide")
+                  $("#totalamount").val(data["totalamount"])
+                  $("input[name='order[products][][quantity]']").val(data["totalquantity"])
+                  $("#totalamount_text i").text("￥"+data["totalamount"])
+                  // $("#loading-box").modal("hide")
+                }else{
+                  modal_doc.modal("hide")
+                }
+              }, "json")
+            }, 10)
+            selected_doc.append("<span class='pull-right'>数量: "+quantity+"</span>")
+          <% else %>
+            modal_doc.modal("hide")
+          <% end %>
+        }else{
+          error_modal("尺码和颜色必选")
+        }
+      }
+    })
+
+    var change_color_value = function(modal_doc, index){
+      color_link = modal_doc.find(".salecolors li.active a")
+      colorvalueid_doc = $("#colorvalueid"+index)
+      colorvaluename_doc = $("#colorvaluename"+index)
+      if(color_link.length > 0){
+        colorvalueid_doc.attr("value", color_link.attr("valueid"))
+        colorvaluename_doc.attr("value", color_link.attr("valuename"))
+      }else{
+        colorvalueid_doc.attr("value", '')
+        colorvaluename_doc.attr("value", '')
+      }
+    }
+
+    var change_size_value = function(modal_doc, index){
+      size_link = modal_doc.find(".sizes li.active a")
+      sizevalueid_doc = $("#sizevalueid"+index)
+      sizevaluename_doc = $("#sizevaluename"+index)
+      if(size_link.length > 0){
+        sizevalueid_doc.attr("value", size_link.attr("valueid"))
+        sizevaluename_doc.attr("value", size_link.attr("valuename"))
+      }else{
+        sizevalueid_doc.attr("value", '')
+        sizevaluename_doc.attr("value", '')
+      }
+    }
+
+    $(document).on("click", ".salecolors li a", function(){
+      this_li = $(this).parents("li")
+      class_name = this_li.attr("class") || ""
+      this_salecolors = $(this).parents(".salecolors")
+      index = this_salecolors.attr("index")
+      this_salecolors.find("li").removeClass("active")
+
+      if(class_name.indexOf('active') >= 0){
+        this_li.removeClass("active")
+      }else{
+        this_li.addClass("active")
+      }
+    })
+
+    $(document).on("click", ".sizes li a", function(){
+      this_li = $(this).parents("li")
+      class_name = this_li.attr("class") || ""
+      this_sizes = $(this).parents(".sizes")
+      index = this_sizes.attr("index")
+      this_sizes.find("li").removeClass("active")
+
+      if(class_name.indexOf('active') >= 0){
+        this_li.removeClass("active")
+      }else{
+        this_li.addClass("active")
+      }
+    })
+
+
+    $(".order_product_form").validate({
+      onsubmit: true,
+      onfocusout: false,
+      onkeyup: false,
+      onclick: false,
+      rules: {
+        "count": {
+          required: true,
+          max: 50,
+          min: 1
+        }
+      },
+      messages: {
+        "count": {
+          required: "数量不能为空",
+          max: "数量最多50",
+          min: "数量至少为1"
+        }
+      },
+      showErrors: function(errorMap, errorList) {
+        var msg = "";
+        $.each(errorList, function(i,v){
+          msg += (v.message+"\r\n");
+        });
+        if(msg!="") error_modal(msg);
+      }
+    })
+
+
+    var validator = $("#new_order_form").validate({
+      onsubmit: true,
+      onfocusout: false,
+      onkeyup: false,
+      onclick: false,
+      ignore: "",
+      rules: {
+        "order[products][][productid]": {
+          required: true
+        },
+        "order[products][][quantity]": {
+          required: true
+        },
+        "order[products][][properties][sizevalueid]": {
+          required: true
+        },
+        "order[products][][properties][colorvalueid]": {
+          required: true
+        },
+        "order[payment[paymentcode]]": {
+          required: true
+        },
+        "order[payment[paymentname]]": {
+          required: true
+        },
+        "order[shippingaddress[shippingaddress]]": {
+          required: true
+        },
+        "order[needinvoice]": {
+          required: true
+        },
+        "order[memo]": {
+          maxlength: 200
+        }
+      },
+      messages: {
+        "order[products][][productid]": {
+          required: "商品不能为空"
+        },
+        "order[products][][quantity]": {
+          required: "商品数量必选"
+        },
+        "order[products][][properties][sizevalueid]": {
+          required: "请选择尺码"
+        },
+        "order[products][][properties][colorvalueid]": {
+          required: "请选择颜色"
+        },
+        "order[shippingaddress[shippingaddress]]": {
+          required: "请选择地址"
+        },
+        "order[memo]": {
+          maxlength: "订单备注不能超过200个字符"
+        },
+        "order[needinvoice]": {
+          required: "是否需要发票不能为空"
+        },
+        "order[payment[paymentcode]]": {
+          required: "支付方式不能为空"
+        },
+        "order[payment[paymentname]]": {
+          required: "支付方式不能为空"
+        }
+      },
+      showErrors: function(errorMap, errorList) {
+        var msg = "";
+        $.each(errorList, function(i,v){
+          msg += (v.message+"\r\n");
+        });
+        if(msg!="") error_modal(msg);
+      },
+      errorPlacement:function(error, element){
+        element.after(error)
+      }
+
+    })
+
+    $("#save_order").on("click", function(){
+      var this_ele = $(this)
+      var form = $("#new_order_form")
+      var totalamount = $("#totalamount").val()
+      var orderno = $("#orderno").val()
+      var memo = $("#memo").val()
+      var invoicetitle = $("#invoicetitle").val()
+      var company_name = $.trim($("#company_name").val())
+      var invoicedetail = $("#invoicedetail").val()
+      var payment_doc = $("input[name='payment_name']:checked")
+      payment_code = payment_doc.attr("paymentcode")
+      payment_name = payment_doc.attr("value")
+
+
+      $("#order_memo").val(memo)
+
+      is_blank_sizevalueid = $.inArray('', $("input[name='order[products][][properties][sizevalueid]']").map(function(){
+        return $(this).val()
+      }).get()) == -1
+
+      is_blank_colorvalueid = $.inArray('', $("input[name='order[products][][properties][colorvalueid]']").map(function(){
+        return $(this).val()
+      }).get()) == -1
+
+      if(orderno.length == 0){
+        if(is_blank_sizevalueid && is_blank_colorvalueid){
+          if(invoicetitle == "公司" && company_name == ""){
+            error_modal("发票抬头选择公司时，公司名称必填。")
+          }else{
+            if($("#new_order_form").valid()){
+              $("input[name='order[payment[paymentcode]]']").val(payment_code)
+              $("input[name='order[payment[paymentname]]']").val(payment_name)
+              if(invoicetitle == "无"){
+                $("#order_needinvoice").val("false")
+                $("#order_invoicetitle").val("")
+                $("#order_invoicedetail").val("")
+              }else if(invoicetitle == "公司"){
+                $("#order_needinvoice").val("true")
+                $("#order_invoicetitle").val(company_name)
+                $("#order_invoicedetail").val(invoicedetail)
+              }else if(invoicetitle == "个人"){
+                $("#order_needinvoice").val("true")
+                $("#order_invoicetitle").val(invoicetitle)
+                $("#order_invoicedetail").val(invoicedetail)
+              }
+
+              form.ajaxSubmit({
+                dataType: "json",
+                success: function(data){
+                  if(data["status"] == true){
+                    $("#loading-box").modal()
+                    order_id = data["data"]["orderno"]
+                    $.post("/ims/orders/"+order_id+"/payments", {money: totalamount, from_page: "orders_new"}, function(data){}, "script")
+                  }else{
+                    error_modal(data["message"])
+                  }
+                },
+                error: function(data){
+                  error_modal("提交订单发生错误")
+                }
+              })
+            }
+          }
+        }else{
+          error_modal("商品的颜色和尺码必填")
+        }
+      }else{
+        $.post("/ims/orders/"+order_id+"/payments", {money: totalamount}, function(data){}, "script")
+      }
+
+    })
+
+
+    format_img(".detail-imgbox");
+
+  })
+</script>
+<% end %>

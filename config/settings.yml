@@ -1,0 +1,27 @@
+api:
+  stage: 'localhost'
+  apis: 'http://10.157.95.224/api'
+provider:
+  other: 0
+  weibo: 1
+  tqq: 2
+  qq_connect: 3
+  wechat: 4
+omniauth:
+  weibo:
+    key:
+    secret:
+  tqq:
+    key:
+    secret:
+  qq_connect:
+    key:
+    secret:
+  wechat:
+    key:
+    secret: 
+alipay:
+  pid:
+  key:
+  seller_email:
+domain: 'youhuiin.com'

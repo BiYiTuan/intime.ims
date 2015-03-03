@@ -1,0 +1,23 @@
+/*
+ * This is a manifest file that'll be compiled into application.css, which will include all the files
+ * listed below.
+ *
+ * Any CSS and SCSS file within this directory, lib/assets/stylesheets, vendor/assets/stylesheets,
+ * or vendor/assets/stylesheets of plugins, if any, can be referenced here using a relative path.
+ *
+ * You're free to add application-wide styles to this file and they'll appear at the top of the
+ * compiled file, but it's generally better to create a new file per style scope.
+ *
+ *= require bootstrap.css
+ *= require bootstrap-responsive.css
+ *= require base.css
+ *= require login.css
+ *= require uiscc.css
+ *= require ajax_page.css
+ *= require common.css
+ *= require homepage.css
+ *= require perfect-scrollbar-0.4.3.min.css
+ *= require royalslider.css
+ *= require themes.css
+ *= require_self
+ */

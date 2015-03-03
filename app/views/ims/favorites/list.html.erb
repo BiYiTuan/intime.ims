@@ -1,0 +1,122 @@
+<div class="wrap-content">
+  <div class="module module-white min-height">
+    <div class="module-tab0 module-tab2 module-product tabs-fixed">
+      <ul id="myTab" class="nav nav-tabs">
+        <li class="active" id="stores"><a href="#favorite_stores">店铺收藏</a></li>
+        <li class=""><a href="#favorite_combos">组合收藏</a></li>
+      </ul>
+
+      <div class="tab-content">
+        <div id="favorite_stores" class="tab-pane active">
+          <div class="module-table-box module-record">
+            <% if @stores.present? %>
+              <div class="module-table-box module-record stores-list-paginate-content">
+                <%= render "stores_list", stores_list: @stores %>
+              </div>
+            <% else %>
+            <%= render "ims/shared/empty" %>
+            <% end %>
+          </div>
+        </div>
+
+        <div id="favorite_combos" class="tab-pane">
+          <div class="module-table-box module-record">
+            <% if @combos.present? %>
+              <div class="module-table-box module-record combos-list-paginate-content">
+                <%= render "combos_list", combos_list: @combos %>
+              </div>
+            <% else %>
+              <%= render "ims/shared/empty" %>
+            <% end %>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<%= hidden_field_tag "stores_count", @search_store[:data][:totalcount] %>
+<%= hidden_field_tag "stores_page", @search_store[:data][:pageindex] %>
+<%= hidden_field_tag "stores_per_page", @search_store[:data][:pagesize] %>
+
+<%= hidden_field_tag "combos_count", @search_combo[:data][:totalcount] %>
+<%= hidden_field_tag "combos_page", @search_combo[:data][:pageindex] %>
+<%= hidden_field_tag "combos_per_page", @search_combo[:data][:pagesize] %>
+
+
+
+<% content_for :javascripts do %>
+<script>
+  $(function(){
+
+    var inLoading = false
+
+    $(document).on("click", ".favorite_link", function(){
+
+      url = $(this).attr("value")
+      $("#loading-box").modal()
+      setTimeout(function(){
+        window.location.href = url
+      }, 1)
+    })
+
+    format_img(".img-spa");
+
+    $('#myTab a').click(function (e) {
+      e.preventDefault()
+      $(this).tab('show');
+
+      format_img(".img-spa");
+    })
+
+    $(window).scroll(function(){
+
+      var htmlHeight=document.body.scrollHeight
+      var clientHeight=document.body.clientHeight
+      var scrollTop=document.body.scrollTop
+
+      if(scrollTop+clientHeight == htmlHeight && !inLoading){
+        if($("#stores").attr("class").indexOf("active") >= 0){
+          var count = parseInt($("#stores_count").attr("value"))
+          var page = parseInt($("#stores_page").attr("value"))
+          var per_page = parseInt($("#stores_per_page").attr("value"))
+          if(page * per_page < count && !inLoading){
+            inLoading = true
+            $("#bottom-loading-box").modal();
+            $.get("/ims/favorites/stores_list", {page: page + 1}, function(data){
+              if(data["status"] == true){
+                $("#favorite_stores .favorite_link:last").after(data["html"])
+                $("#stores_count").attr("value", data["count"])
+                $("#stores_per_page").attr("value", data["per_page"])
+                $("#stores_page").attr("value", data["page"])
+              }
+              $("#bottom-loading-box").modal('hide')
+              inLoading = false
+            }, "json")
+          }
+        }else{
+          var count = parseInt($("#combos_count").attr("value"))
+          var page = parseInt($("#combos_page").attr("value"))
+          var per_page = parseInt($("#combos_per_page").attr("value"))
+          if(page * per_page < count && !inLoading){
+            inLoading = true
+            $("#bottom-loading-box").modal();
+            $.get("/ims/favorites/combos_list", {page: page + 1}, function(data){
+              if(data["status"] == true){
+                $("#favorite_combos .favorite_link:last").after(data["html"])
+                $("#combos_count").attr("value", data["count"])
+                $("#combos_per_page").attr("value", data["per_page"])
+                $("#combos_page").attr("value", data["page"])
+              }
+              $("#bottom-loading-box").modal('hide');
+              inLoading = false;
+            }, "json")
+          }
+        }
+      }
+
+    })
+})
+</script>
+<% end %>
